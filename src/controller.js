@@ -31,7 +31,25 @@ class controller {
     return results;
   }
   async _uploadEntry(entry) {
-    //upload entry to db -> the magic happens here
+    try {
+      const { author, title, content, thumbnail } = entry;
+
+      // Insert the new blog entry into the BlogEntries table
+      const [newEntryId] = await knex("BlogEntries")
+        .insert({
+          author,
+          title,
+          content: JSON.stringify(content), // Store content as JSON string
+          thumbnail, // Base64 encoded thumbnail // Current timestamp
+        })
+        .returning("id");
+
+      // Return the newly inserted entry ID
+      return { id: newEntryId };
+    } catch (error) {
+      console.error("Error uploading entry to DB:", error);
+      throw new Error("Failed to upload entry");
+    }
   }
 }
 
