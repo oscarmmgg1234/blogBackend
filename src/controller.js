@@ -30,6 +30,9 @@ class controller {
       .where("id", id);
     return results;
   }
+  async _uploadEntry(entry) {
+    //upload entry to db -> the magic happens here
+  }
 }
 
 module.exports = { controller };
