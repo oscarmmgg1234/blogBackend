@@ -26,7 +26,7 @@ class controller {
 
   async _getEntry(id) {
     const results = await knex("BlogEntries")
-      .select("author", "title", "content", "entry_date", "id")
+      .select("author", "title", "content", "entry_date", "id", "comments")
       .where("id", id);
     return results;
   }
