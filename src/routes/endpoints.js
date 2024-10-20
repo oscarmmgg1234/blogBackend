@@ -28,7 +28,7 @@ router.get("/entry/:id", async (req, res) => {
 
 router.post("/upload", upload.any(), async (req, res) => {
   try {
-    const { author, title, content } = req.body;
+    const { author, title, content, summary } = req.body;
 
     // Parse content if it's a JSON string
     let parsedContent;
@@ -90,6 +90,7 @@ router.post("/upload", upload.any(), async (req, res) => {
       title,
       content: processedContent,
       thumbnail: thumbnailBase64,
+      summary: summary || "",
     };
 
     // Upload the entry to the database using the controller

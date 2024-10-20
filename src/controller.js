@@ -19,7 +19,7 @@ class controller {
 
   async _getEntries() {
     const results = await knex("BlogEntries")
-      .select("id", "title", "thumbnail", "entry_date")
+      .select("id", "title", "thumbnail", "entry_date", "summary")
       .orderBy("entry_date", "desc");
     return results;
   }
@@ -32,7 +32,7 @@ class controller {
   }
   async _uploadEntry(entry) {
     try {
-      const { author, title, content, thumbnail } = entry;
+      const { author, title, content, thumbnail, summary } = entry;
 
       // Insert the new blog entry into the BlogEntries table
       const [newEntryId] = await knex("BlogEntries")
@@ -41,6 +41,7 @@ class controller {
           title,
           content: JSON.stringify(content), // Store content as JSON string
           thumbnail, // Base64 encoded thumbnail // Current timestamp
+          summary,
         })
         .returning("id");
 
@@ -50,6 +51,9 @@ class controller {
       console.error("Error uploading entry to DB:", error);
       throw new Error("Failed to upload entry");
     }
+  }
+  async pushComment(id, comment) {
+    //push comment to the comments array for entry with id
   }
 }
 
