@@ -3,7 +3,13 @@ const server = express();
 const cors = require("cors");
 const router = require("./src/routes/endpoints");
 
-server.use(cors());
+
+const corsOptions = {
+  origin: "https://oscarmmgg1234.github.io", // Replace with the origin you want to allow
+  optionsSuccessStatus: 200, // For legacy browser support
+};
+
+server.use(cors(corsOptions));
 server.use(express.json());
 server.use(router);
 
