@@ -3,7 +3,6 @@ const server = express();
 const cors = require("cors");
 const router = require("./src/routes/endpoints");
 
-
 server.use(
   cors({
     origin: "https://oscarmmgg1234.github.io", // Change this to the correct origin
@@ -12,7 +11,8 @@ server.use(
   })
 );
 
-server.use(express.json());
+server.use(express.json({ limit: "50mb" }));
+server.use(express.urlencoded({ extended: true, limit: "50mb" }));
 server.use(router);
 
 server.listen(3000, () => {
