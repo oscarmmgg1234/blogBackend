@@ -109,9 +109,9 @@ router.post("/upload", upload.any(), async (req, res) => {
 router.post("/verify", async (req, res) => {
   const { pass } = req.body;
   if (pass == "Omariscool1234!") {
-    res.status(200).send("Verification successful");
+    res.status(200).json({ success: true, message: "Verification successful" });
   } else {
-    res.status(401).send("Unauthorized");
+    res.status(401).json({ success: false, message: "Unauthorized" });
   }
 });
 
