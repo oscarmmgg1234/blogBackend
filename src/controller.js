@@ -1,4 +1,6 @@
 const { query_manager } = require("./data/query_manager");
+const Filter = require("bad-words"); // Import a library for filtering bad language
+const filter = new Filter(); // Create an instance of the filter
 
 const knex = query_manager;
 
@@ -52,8 +54,43 @@ class controller {
       throw new Error("Failed to upload entry");
     }
   }
+
   async pushComment(id, comment) {
-    //push comment to the comments array for entry with id
+    // push comment to the comments array for entry with id
+    try {
+      // Start a transaction to avoid concurrency issues
+      await knex.transaction(async (trx) => {
+        const result = await trx("BlogEntries")
+          .select("comments")
+          .where("id", id)
+          .first();
+
+        if (result) {
+          // Parse the comments field if it's stored as JSON
+          const comments = result.comments ? JSON.parse(result.comments) : [];
+
+          // Sanitize the comment by filtering foul language
+          const sanitizedComment = {
+            author: comment.author,
+            comment: filter.clean(comment.comment), // Filter bad words
+            date: new Date().toISOString(),
+          };
+
+          // Push the sanitized comment to the array
+          comments.push(sanitizedComment);
+
+          // Update the comments field, stringifying the array
+          await trx("BlogEntries")
+            .where("id", id)
+            .update({ comments: JSON.stringify(comments) });
+        } else {
+          throw new Error("Entry not found");
+        }
+      });
+    } catch (error) {
+      console.error("Error pushing comment to DB:", error);
+      throw new Error("Failed to push comment");
+    }
   }
 }
 
