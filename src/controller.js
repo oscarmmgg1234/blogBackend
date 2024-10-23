@@ -67,7 +67,7 @@ class controller {
 
         if (result) {
           // Parse the comments field if it's stored as JSON
-          const comments = result.comments ? JSON.parse(result.comments) : [];
+          const comments = result.comments ? result.comments : [];
 
           // Sanitize the comment by filtering foul language
           const sanitizedComment = {
