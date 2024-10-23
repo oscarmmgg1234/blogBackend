@@ -83,7 +83,7 @@ class controller {
           await trx("BlogEntries")
             .where("id", id)
             .update({ comments: JSON.stringify(comments) });
-          return { status: true };
+          return comments;
         } else {
           throw new Error("Entry not found");
         }
