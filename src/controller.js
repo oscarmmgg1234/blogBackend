@@ -63,6 +63,8 @@ class controller {
           .where("id", id)
           .first();
 
+        console.log("Result:", result);
+
         if (result) {
           // Parse the comments field if it's stored as JSON
           const comments = result.comments ? JSON.parse(result.comments) : [];
@@ -81,6 +83,7 @@ class controller {
           await trx("BlogEntries")
             .where("id", id)
             .update({ comments: JSON.stringify(comments) });
+          return { status: true };
         } else {
           throw new Error("Entry not found");
         }
