@@ -1,6 +1,4 @@
 const { query_manager } = require("./data/query_manager");
-const Filter = require("bad-words"); // Import a library for filtering bad language
-const filter = new Filter(); // Create an instance of the filter
 
 const knex = query_manager;
 
@@ -72,7 +70,7 @@ class controller {
           // Sanitize the comment by filtering foul language
           const sanitizedComment = {
             author: comment.author,
-            comment: filter.clean(comment.comment), // Filter bad words
+            comment: comment.comment, // Filter bad words
             date: new Date().toISOString(),
           };
 
