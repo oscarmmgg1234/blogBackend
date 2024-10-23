@@ -63,7 +63,6 @@ class controller {
           .where("id", id)
           .first();
 
-        console.log("Result:", result);
 
         if (result) {
           // Parse the comments field if it's stored as JSON
