@@ -115,9 +115,9 @@ router.post("/verify", async (req, res) => {
   }
 });
 
-router.get("/comment/:id/:author/:comment", async (req, res) => {
+router.post("/comment", async (req, res) => {
   try {
-    const { id, author, comment } = req.params;
+    const { id, author, comment } = req.body;
     const result = await Controller.pushComment(id, { author, comment });
     res.status(200).send(result);
   } catch (error) {
