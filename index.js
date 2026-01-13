@@ -14,7 +14,13 @@ server.use(
 server.use(express.json({ limit: "50mb" }));
 server.use(express.urlencoded({ extended: true, limit: "50mb" }));
 server.use(router);
+server.get("/", (req, res) => {
+  res.status(200).json({ ok: true, service: "blogbackend", time: new Date().toISOString() });
+});
 
+server.get("/health", (req, res) => {
+  res.status(200).send("ok");
+});
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
