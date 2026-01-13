@@ -1,11 +1,11 @@
 exports.query_manager = require("knex")({
   client: "mysql2",
   connection: {
-    host: "zumatest.cv00wewq0dtg.us-west-2.rds.amazonaws.com",
-    user: "admin",
+    host: "localhost",
+    user: "blogadmin",
     port: 3306,
-    password: "Omariscool1234!",
-    database: "OscarBlog",
+    password: "Oscythetechguy1!",
+    database: "blogbackend",
     // ssl: sslOptions,
   },
   debug: false,
