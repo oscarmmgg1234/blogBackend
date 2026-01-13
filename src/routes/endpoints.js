@@ -7,6 +7,20 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+const rateLimit = require("express-rate-limit");
+
+const verifyLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5,                 // 5 attempts per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many attempts. Try again later."
+  }
+});
+
+
 const Controller = controller.getInstance();
 
 router.get("/entries", async (req, res) => {
@@ -106,14 +120,22 @@ router.post("/upload", upload.any(), async (req, res) => {
   }
 });
 
-router.post("/verify", async (req, res) => {
+router.post("/verify", verifyLimiter, async (req, res) => {
   const { pass } = req.body;
-  if (pass == "Omariscool1234!") {
-    res.status(200).json({ success: true, message: "Verification successful" });
-  } else {
-    res.status(401).json({ success: false, message: "Unauthorized" });
+
+  if (pass === process.env.VERIFY_PASS) {
+    return res.status(200).json({
+      success: true,
+      message: "Verification successful"
+    });
   }
+
+  return res.status(401).json({
+    success: false,
+    message: "Unauthorized"
+  });
 });
+
 
 router.post("/comment", async (req, res) => {
   try {
