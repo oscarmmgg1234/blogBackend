@@ -5,21 +5,20 @@ const sharp = require("sharp");
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 const rateLimit = require("express-rate-limit");
 
 const verifyLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 5,                 // 5 attempts per IP
+  windowMs: 5 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    message: "Too many attempts. Try again later."
-  }
+    message: "Too many attempts. Try again later.",
+  },
 });
-
 
 const Controller = controller.getInstance();
 
@@ -40,11 +39,25 @@ router.get("/entry/:id", async (req, res) => {
   }
 });
 
+/**
+ * ✅ UPDATED UPLOAD ROUTE
+ * Accepts:
+ * - thumbnail (file)
+ * - content JSON string
+ * - content_image_0..N (files)
+ *
+ * Converts:
+ * - thumbnail -> base64 (500x500)
+ * - each content image file -> base64 (NO forced resize)
+ *
+ * Preserves:
+ * - block.align, block.spacing, block.widthPct, block.caption, block.language
+ */
 router.post("/upload", upload.any(), async (req, res) => {
   try {
     const { author, title, content, summary } = req.body;
 
-    // Parse content if it's a JSON string
+    // Parse content JSON
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
@@ -52,53 +65,78 @@ router.post("/upload", upload.any(), async (req, res) => {
       return res.status(400).json({ error: "Invalid content format." });
     }
 
-    // Check for required fields
-    if (!author || !title || !parsedContent) {
-      return res
-        .status(400)
-        .json({ error: "Author, title, and content are required." });
+    if (!author || !title || !Array.isArray(parsedContent)) {
+      return res.status(400).json({
+        error: "Author, title, and content array are required.",
+      });
     }
 
-    // Find the thumbnail file
-    const thumbnailFile = req.files.find(
-      (file) => file.fieldname === "thumbnail"
-    );
+    // Build file lookup table for speed
+    const fileMap = {};
+    for (const f of req.files || []) {
+      fileMap[f.fieldname] = f;
+    }
+
+    // Thumbnail required
+    const thumbnailFile = fileMap["thumbnail"];
     if (!thumbnailFile) {
       return res.status(400).json({ error: "Thumbnail image is required." });
     }
 
-    // Resize and compress the thumbnail image
+    // Resize/compress thumbnail
     const thumbnailBuffer = await sharp(thumbnailFile.buffer)
       .resize(500, 500)
-      .jpeg({ quality: 100 })
+      .jpeg({ quality: 90 })
       .toBuffer();
+
     const thumbnailBase64 = thumbnailBuffer.toString("base64");
 
-    // Process content array (handle images if needed)
+    // Process content blocks (images)
     const processedContent = await Promise.all(
-      parsedContent.map(async (section) => {
-        if (section.type === "image" && section.content) {
-          // Find the image file corresponding to this section
-          const imageFile = req.files.find(
-            (file) => file.fieldname === section.content
-          );
-          if (imageFile) {
-            // Resize and compress the image
-            const imageBuffer = await sharp(imageFile.buffer)
-              .resize(300, 300)
+      parsedContent.map(async (block) => {
+        if (block.type === "image" && typeof block.content === "string") {
+          // block.content contains key like "content_image_0"
+          const imageFile = fileMap[block.content];
+
+          if (!imageFile) {
+            return { ...block, content: null };
+          }
+
+          // ✅ Don't resize content images (diagrams need resolution)
+          // Optional: compress to jpeg to reduce size (or keep original)
+          // If you want to KEEP PNG, skip sharp and base64 the raw buffer.
+          const isPng = imageFile.mimetype === "image/png";
+          const isJpeg = imageFile.mimetype === "image/jpeg" || imageFile.mimetype === "image/jpg";
+          const isWebp = imageFile.mimetype === "image/webp";
+
+          let outBuffer = imageFile.buffer;
+          let outMime = imageFile.mimetype;
+
+          // Convert everything to JPEG for consistency (smaller), but NO resize
+          // If you prefer to preserve PNG, comment this section out.
+          if (isPng || isWebp) {
+            outBuffer = await sharp(imageFile.buffer)
               .jpeg({ quality: 90 })
               .toBuffer();
-            section.content = imageBuffer.toString("base64"); // Convert image to base64
-          } else {
-            // Handle case where image is not provided
-            section.content = null;
+            outMime = "image/jpeg";
+          } else if (isJpeg) {
+            outBuffer = await sharp(imageFile.buffer)
+              .jpeg({ quality: 90 })
+              .toBuffer();
+            outMime = "image/jpeg";
           }
+
+          return {
+            ...block,
+            content: outBuffer.toString("base64"),
+            mimetype: outMime, // ✅ helps frontend render correctly
+          };
         }
-        return section;
+
+        return block;
       })
     );
 
-    // Prepare the blog entry object
     const blogEntry = {
       author,
       title,
@@ -107,8 +145,7 @@ router.post("/upload", upload.any(), async (req, res) => {
       summary: summary || "",
     };
 
-    // Upload the entry to the database using the controller
-    const result = await Controller._uploadEntry(blogEntry);
+    await Controller._uploadEntry(blogEntry);
 
     res.status(201).json({
       message: "Blog post uploaded successfully",
@@ -123,19 +160,18 @@ router.post("/upload", upload.any(), async (req, res) => {
 router.post("/verify", verifyLimiter, async (req, res) => {
   const { pass } = req.body;
 
-  if (pass === 'Omariscool1234!') {
+  if (pass === "Omariscool1234!") {
     return res.status(200).json({
       success: true,
-      message: "Verification successful"
+      message: "Verification successful",
     });
   }
 
   return res.status(401).json({
     success: false,
-    message: "Unauthorized"
+    message: "Unauthorized",
   });
 });
-
 
 router.post("/comment", async (req, res) => {
   try {
@@ -148,3 +184,4 @@ router.post("/comment", async (req, res) => {
 });
 
 module.exports = router;
+
