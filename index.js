@@ -11,7 +11,7 @@ server.use(
   })
 );
 
-app.set("trust proxy", true);
+server.set("trust proxy", true);
 server.use(express.json({ limit: "50mb" }));
 server.use(express.urlencoded({ extended: true, limit: "50mb" }));
 server.use(router);
