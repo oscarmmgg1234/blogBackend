@@ -123,7 +123,7 @@ router.post("/upload", upload.any(), async (req, res) => {
 router.post("/verify", verifyLimiter, async (req, res) => {
   const { pass } = req.body;
 
-  if (pass === process.env.VERIFY_PASS) {
+  if (pass === 'Omariscool1234!') {
     return res.status(200).json({
       success: true,
       message: "Verification successful"
