@@ -25,11 +25,16 @@ class controller {
   }
 
   async _getEntry(id) {
-    const results = await knex("BlogEntries")
-      .select("author", "title", "content", "entry_date", "id", "comments")
-      .where("id", id);
-    return results;
-  }
+  const results = await knex("BlogEntries")
+    .select("author", "title", "content", "entry_date", "id", "comments")
+    .where("id", id);
+
+  return results.map((row) => ({
+    ...row,
+    content: typeof row.content === "string" ? JSON.parse(row.content) : row.content,
+    comments: typeof row.comments === "string" ? JSON.parse(row.comments) : (row.comments || []),
+  }));
+}
   async _uploadEntry(entry) {
     try {
       const { author, title, content, thumbnail, summary } = entry;
