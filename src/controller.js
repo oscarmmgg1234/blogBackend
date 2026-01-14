@@ -4,16 +4,11 @@ const knex = query_manager;
 
 class controller {
   constructor() {
-    //singleton
-    if (controller.instance) {
-      return controller.instance;
-    }
+    if (controller.instance) return controller.instance;
   }
 
   static getInstance() {
-    if (!controller.instance) {
-      controller.instance = new controller();
-    }
+    if (!controller.instance) controller.instance = new controller();
     return controller.instance;
   }
 
@@ -25,32 +20,34 @@ class controller {
   }
 
   async _getEntry(id) {
-  const results = await knex("BlogEntries")
-    .select("author", "title", "content", "entry_date", "id", "comments")
-    .where("id", id);
+    const results = await knex("BlogEntries")
+      .select("author", "title", "content", "entry_date", "id", "comments")
+      .where("id", id);
 
-  return results.map((row) => ({
-    ...row,
-    content: typeof row.content === "string" ? JSON.parse(row.content) : row.content,
-    comments: typeof row.comments === "string" ? JSON.parse(row.comments) : (row.comments || []),
-  }));
-}
+    return results.map((row) => ({
+      ...row,
+      content: typeof row.content === "string" ? JSON.parse(row.content) : row.content,
+      comments:
+        typeof row.comments === "string"
+          ? JSON.parse(row.comments)
+          : (row.comments || []),
+    }));
+  }
+
   async _uploadEntry(entry) {
     try {
       const { author, title, content, thumbnail, summary } = entry;
 
-      // Insert the new blog entry into the BlogEntries table
       const [newEntryId] = await knex("BlogEntries")
         .insert({
           author,
           title,
-          content: JSON.stringify(content), // Store content as JSON string
-          thumbnail, // Base64 encoded thumbnail // Current timestamp
+          content: JSON.stringify(content),
+          thumbnail,
           summary,
         })
         .returning("id");
 
-      // Return the newly inserted entry ID
       return { id: newEntryId };
     } catch (error) {
       console.error("Error uploading entry to DB:", error);
@@ -59,38 +56,34 @@ class controller {
   }
 
   async pushComment(id, comment) {
-    // push comment to the comments array for entry with id
     try {
-      // Start a transaction to avoid concurrency issues
       await knex.transaction(async (trx) => {
         const result = await trx("BlogEntries")
           .select("comments")
           .where("id", id)
           .first();
 
+        if (!result) throw new Error("Entry not found");
 
-        if (result) {
-          // Parse the comments field if it's stored as JSON
-          const comments = result.comments ? result.comments : [];
+        // ✅ FIX: parse JSON string safely
+        const comments =
+          typeof result.comments === "string"
+            ? JSON.parse(result.comments)
+            : (result.comments || []);
 
-          // Sanitize the comment by filtering foul language
-          const sanitizedComment = {
-            author: comment.author,
-            comment: comment.comment, // Filter bad words
-            date: new Date().toISOString(),
-          };
+        const sanitizedComment = {
+          author: comment.author,
+          comment: comment.comment,
+          date: new Date().toISOString(),
+        };
 
-          // Push the sanitized comment to the array
-          comments.push(sanitizedComment);
+        comments.push(sanitizedComment);
 
-          // Update the comments field, stringifying the array
-          await trx("BlogEntries")
-            .where("id", id)
-            .update({ comments: JSON.stringify(comments) });
-          return comments;
-        } else {
-          throw new Error("Entry not found");
-        }
+        await trx("BlogEntries")
+          .where("id", id)
+          .update({ comments: JSON.stringify(comments) });
+
+        return comments;
       });
     } catch (error) {
       console.error("Error pushing comment to DB:", error);
@@ -100,3 +93,4 @@ class controller {
 }
 
 module.exports = { controller };
+
