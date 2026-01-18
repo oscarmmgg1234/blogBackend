@@ -2,7 +2,7 @@ const express = require("express");
 const server = express();
 const cors = require("cors");
 const router = require("./src/routes/endpoints");
-
+require("dotenv").config();
 server.use(
   cors({
     origin: "https://oscarmmgg1234.github.io", // Change this to the correct origin
