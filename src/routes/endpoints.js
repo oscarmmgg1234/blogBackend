@@ -6,7 +6,8 @@ const multer = require("multer");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
-
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 
 const verifyLimiter = rateLimit({
@@ -21,6 +22,34 @@ const verifyLimiter = rateLimit({
 });
 
 const Controller = controller.getInstance();
+
+function requireAdmin(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) {
+    return res.status(401).json({ success: false });
+  }
+
+  try {
+    const token = auth.slice(7);
+    const [payloadB64, sig] = token.split(".");
+    const payload = Buffer.from(payloadB64, "base64").toString();
+    
+    const expectedSig = crypto
+      .createHmac("sha256", process.env.ADMIN_TOKEN_SECRET)
+      .update(payload)
+      .digest("hex");
+
+    if (sig !== expectedSig) throw new Error();
+
+    const { exp } = JSON.parse(payload);
+    if (Date.now() > exp) throw new Error();
+
+    next();
+  } catch {
+    res.status(401).json({ success: false });
+  }
+}
+
 
 router.get("/entries", async (req, res) => {
   try {
@@ -53,7 +82,7 @@ router.get("/entry/:id", async (req, res) => {
  * Preserves:
  * - block.align, block.spacing, block.widthPct, block.caption, block.language
  */
-router.post("/upload", upload.any(), async (req, res) => {
+router.post("/upload", requireAdmin, upload.any(), async (req, res) => {
   try {
     const { author, title, content, summary } = req.body;
 
@@ -160,16 +189,34 @@ router.post("/upload", upload.any(), async (req, res) => {
 router.post("/verify", verifyLimiter, async (req, res) => {
   const { pass } = req.body;
 
-  if (pass === "Omariscool1234!") {
-    return res.status(200).json({
-      success: true,
-      message: "Verification successful",
-    });
+  if (typeof pass !== "string" || pass.length < 8) {
+    return res.status(400).json({ success: false });
   }
 
-  return res.status(401).json({
-    success: false,
-    message: "Unauthorized",
+  const hash = process.env.ADMIN_SECRET_HASH;
+  if (!hash) {
+    return res.status(500).json({ success: false });
+  }
+
+  const ok = await bcrypt.compare(pass, hash);
+  if (!ok) {
+    return res.status(401).json({ success: false });
+  }
+
+  const expiresAt = Date.now() + Number(process.env.ADMIN_TOKEN_TTL_MIN) * 60_000;
+
+  const payload = JSON.stringify({ exp: expiresAt });
+  const signature = crypto
+    .createHmac("sha256", process.env.ADMIN_TOKEN_SECRET)
+    .update(payload)
+    .digest("hex");
+
+  const token = Buffer.from(payload).toString("base64") + "." + signature;
+
+  return res.json({
+    success: true,
+    token,
+    expiresAt,
   });
 });
 
