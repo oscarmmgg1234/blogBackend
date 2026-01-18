@@ -230,5 +230,13 @@ router.post("/comment", async (req, res) => {
   }
 });
 
+router.post("/contactme", async (req, res) => {
+try{
+        res.send(await Controller.pushMessage(req.body.data));
+}catch(error){
+        res.status(500).send(error);
+}
+})
+
 module.exports = router;
 

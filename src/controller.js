@@ -34,6 +34,28 @@ class controller {
     }));
   }
 
+    async pushMessage(data){
+
+          try {
+                  const {fn, ln, country, email, message} = data;
+
+                  const [newEntryId] = await knex("Contactme")
+                  .insert({
+                          fn,
+                          ln,
+                          email,
+                          country,
+                          message
+                  })
+                  .returning("id")
+
+                  return {id: newEntryId};
+
+          } catch (error){
+                  console.error("Error uploading entry to DB:", error);
+      throw new Error("Failed to upload entry");
+          }}
+
   async _uploadEntry(entry) {
     try {
       const { author, title, content, thumbnail, summary } = entry;
