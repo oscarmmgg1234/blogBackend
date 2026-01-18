@@ -9,6 +9,13 @@ const upload = multer({ storage });
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
+const slowDown = require("express-slow-down");
+
+const verifySlowdown = slowDown({
+  windowMs: 10 * 60 * 1000,
+  delayAfter: 3,
+  delayMs: () => 750,
+});
 
 
 
@@ -22,6 +29,14 @@ const verifyLimiter = rateLimit({
     message: "Too many attempts. Try again later.",
   },
 });
+
+const uploadLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 
 const Controller = controller.getInstance();
 
@@ -84,7 +99,7 @@ router.get("/entry/:id", async (req, res) => {
  * Preserves:
  * - block.align, block.spacing, block.widthPct, block.caption, block.language
  */
-router.post("/upload", requireAdmin, upload.any(), async (req, res) => {
+router.post("/upload", uploadLimiter, requireAdmin, upload.any(), async (req, res) => {
   try {
     const { author, title, content, summary } = req.body;
 
@@ -188,7 +203,7 @@ router.post("/upload", requireAdmin, upload.any(), async (req, res) => {
   }
 });
 
-router.post("/verify", verifyLimiter, async (req, res) => {
+router.post("/verify", verifyLimiter,verifySlowdown, async (req, res) => {
   const { pass } = req.body;
 
   if (typeof pass !== "string" || pass.length < 8) {
